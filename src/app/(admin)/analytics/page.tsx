@@ -2,25 +2,13 @@
 
 import GrowthRateCard from "@/src/components/GrowthRateCard";
 import KpiCard from "@/src/components/KpiCard";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import SalesComparisonChart from "@/src/components/SalesComparisonChart";
+import { useAnalytics } from "@/src/hooks/useAnalytics";
+import { useAnalyticsMetrics } from "@/src/hooks/useAnalyticsMetrics";
+import { useSalesComparison } from "@/src/hooks/useSalesComparison";
+import type { Period } from "@/src/types/analytics";
+import { useState } from "react";
 
-type Period = "7d" | "30d" | "90d";
-
-interface SalesData {
-    date: string;
-    revenue: number;
-}
-
-interface AnalyticsResponse {
-    period: Period;
-    sales: SalesData[];
-}
-
-function formatRevenue(value: number) {
-    return `${(value / 10000).toLocaleString("ko-KR")}만`;
-}
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("ko-KR", {
@@ -29,66 +17,31 @@ function formatCurrency(value: number) {
         maximumFractionDigits: 0,
     }).format(value);
 }
-function calculateGrowthRate(
-    current: number,
-    previous: number
-) {
-    if (previous === 0) {
-        return null;
-    }
-
-    return ((current - previous) / previous) * 100;
-}
 
 export default function AnalyticsPage() {
     const [period, setPeriod] = useState<Period>("7d");
 
     const { data, isPending, isError, isFetching } =
-        useQuery<AnalyticsResponse>({
-            queryKey: ["analytics", period],
-            queryFn: async () => {
-                const response = await fetch(
-                    `/api/analytics?period=${period}`
-                );
-
-                if (!response.ok) {
-                    throw new Error("매출 데이터 요청 실패")
-                }
-                return response.json();
-            },
-
-            staleTime: 1000 * 60,
-        })
+        useAnalytics(period);
     const sales = data?.sales;
-    const { totalRevenue, averageRevenue, maxRevenue, growthRate } = useMemo(() => {
-        const items = sales ?? [];
+    const previousTotalRevenue = data?.previousTotalRevenue;
 
-        const totalRevenue = items.reduce((sum, item) => {
-            return sum + item.revenue;
-        }, 0);
+    const {
+        totalRevenue,
+        averageRevenue,
+        maxRevenue,
+        growthRate,
+    } = useAnalyticsMetrics(sales, previousTotalRevenue);
 
-        const averageRevenue =
-            items.length > 0 ? totalRevenue / items.length : 0;
-
-        const maxRevenue = items.length > 0
-            ? Math.max(...items.map((item) => item.revenue))
-            : 0;
-        const currentRevenue = items.at(-1)?.revenue ?? 0;
-        const previousRevenue = items.at(-2)?.revenue ?? 0;
-
-        const growthRate =
-            items.length >= 2
-                ? calculateGrowthRate(currentRevenue, previousRevenue)
-                : null;
-
-        return { totalRevenue, averageRevenue, maxRevenue, growthRate };
-
-    }, [sales]);
+    const comparisonData = useSalesComparison(
+        data?.sales,
+        data?.previousSales
+    );
 
     const growthTitle = {
-        "7d": "전일 대비 매출 증감률",
-        "30d": "전주 대비 매출 증감률",
-        "90d": "전월 대비 매출 증감률",
+        "7d": "이전 7일 대비 매출 증감률",
+        "30d": "이전 30일 대비 매출 증감률",
+        "90d": "이전 90일 대비 매출 증감률",
     };
 
     function getKpiValue(value: number) {
@@ -130,7 +83,7 @@ export default function AnalyticsPage() {
 
             <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="mb-6 text-lg font-semibold">
-                    매출 추이
+                    현재 기간 vs 이전 기간 매출 비교
                 </h2>
 
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -156,38 +109,18 @@ export default function AnalyticsPage() {
                             : ""}
                     </p>
                 </div>
+                {isPending ? (
+                    <div className="flex h-80 items-center justify-center text-slate-500">
+                        매출 데이터를 불러오는 중...
+                    </div>
+                ) : isError ? (
+                    <div className="flex h-80 items-center justify-center text-red-500">
+                        매출 데이터를 불러오지 못했습니다.
+                    </div>
+                ) : (
+                    <SalesComparisonChart data={comparisonData} />
+                )}
 
-                <div className="h-80 w-full">
-                    {isPending ? (
-                        <div className="flex h-full items-center justify-center text-slate-500">
-                            매출 데이터를 불러오는 중...
-                        </div>
-                    ) : isError ? (
-                        <div className="flex h-full items-center justify-center text-red-500">
-                            매출 데이터를 불러오지 못했습니다.
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={data.sales}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis tickFormatter={formatRevenue} width={85} />
-                                <Tooltip
-                                    formatter={(value) => [
-                                        `${Number(value).toLocaleString("ko-KR")}원`,
-                                        "매출",
-                                    ]}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="revenue"
-                                    stroke="#2563eb"
-                                    strokeWidth={2}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
             </div>
         </div>
     );
