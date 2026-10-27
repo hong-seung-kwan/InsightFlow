@@ -38,7 +38,7 @@ export async function GET() {
       totalCustomers: 1250,
       newCustomers: 320,
       repeatCustomers: 410,
-      repeatPurchaseRate: 32.5,  
+      repeatPurchaseRate: 32.8,  
     })
 
 }

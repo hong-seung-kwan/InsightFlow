@@ -31,7 +31,7 @@ export default function CustomerDistributionChart({
     ];
 
     return (
-        <div className="h-80 rounded-xl border bg-white p-5">
+        <div className="h-80 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Pie
