@@ -1,6 +1,9 @@
 "use client";
+import ErrorState from "@/src/components/ErrorState";
 import KpiCard from "@/src/components/KpiCard";
+import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
 import { useQuery } from "@tanstack/react-query";
+import { ShoppingBag, TrendingUp, Users, Wallet } from "lucide-react";
 
 type KpiId = "revenue" | "orders" | "visits" | "conversion";
 
@@ -34,9 +37,27 @@ function formatKpiValue(
     }
     return String(value);
 }
+const kpiConfig = {
+    revenue: {
+        icon: <Wallet size={20} />,
+        color: "blue",
+    },
+    orders: {
+        icon: <ShoppingBag size={20} />,
+        color: "green",
+    },
+    visits: {
+        icon: <Users size={20} />,
+        color: "orange",
+    },
+    conversion: {
+        icon: <TrendingUp size={20} />,
+        color: "red",
+    },
+} as const;
 
 export default function DashboardPage() {
-    const { data, isPending, isError, isFetching } = useQuery<KpiData[]>({
+    const { data, isPending, isError, isFetching, refetch } = useQuery<KpiData[]>({
         queryKey: ["dashboard"],
         queryFn: async () => {
 
@@ -51,10 +72,39 @@ export default function DashboardPage() {
     })
 
     if (isPending) {
-        return <p>데이터를 불러오는 중입니다...</p>
+        return (
+            <main className="p-8">
+                <h1 className="text-3xl font-bold">
+                    InsightFlow Dashboard
+                </h1>
+                <p className="mt-2 text-gray-500">
+                    쇼핑몰 매출 및 고객 분석 대시보드
+                </p>
+
+                <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {Array.from({ length: 4 }, (_, index) => (
+                        <KpiCardSkeleton key={index} />
+                    ))}
+                </div>
+            </main>
+        );
     }
     if (isError) {
-        return <p>데이터를 불러오지 못했습니다...</p>
+        return (
+            <main className="p-8">
+                <h1 className="text-3xl font-bold">
+                    InsightFlow Dashboard
+                </h1>
+
+                <div className="mt-6">
+                    <ErrorState
+                        message="대시보드 데이터를 불러오지 못했습니다."
+                        onRetry={() => refetch()}
+                        isRetrying={isFetching}
+                    />
+                </div>
+            </main>
+        )
     }
 
     return (
@@ -73,6 +123,8 @@ export default function DashboardPage() {
                         key={item.id}
                         title={item.title}
                         value={formatKpiValue(item.id, item.value)}
+                        icon={kpiConfig[item.id].icon}
+                        color={kpiConfig[item.id].color}
                     />
                 ))}
             </div>

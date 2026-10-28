@@ -2,13 +2,17 @@
 
 import CustomerDistributionChart from "@/src/components/CustomerDistributionChart";
 import CustomerTable from "@/src/components/CustomerTable";
+import ErrorState from "@/src/components/ErrorState";
 import KpiCard from "@/src/components/KpiCard";
+import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
+import TableSkeleton from "@/src/components/TableSkeleton";
 import { useCustomers } from "@/src/hooks/useCustomers";
+import { TrendingUp, UserCheck, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 
 export default function CustomersPage() {
     const [search, setSearch] = useState("");
-    const { data, isPending, isError } = useCustomers();
+    const { data, isPending, isError, isFetching, refetch } = useCustomers();
 
     const filteredCustomers = (data?.customers ?? []).filter((customer) => {
         return customer.name.includes(search.trim());
@@ -21,26 +25,58 @@ export default function CustomersPage() {
         return `${value?.toLocaleString("ko-KR") ?? "0"}${suffix}`;
     }
 
+    if (isError) {
+        return (
+            <div className="p-8">
+                <h1 className="text-3xl font-bold">고객 분석</h1>
+
+                <div className="mt-6">
+                    <ErrorState
+                        message="고객 데이터를 불러오지 못했습니다."
+                        onRetry={() => refetch()}
+                        isRetrying={isFetching}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-8">
             <h1 className="text-3xl font-bold">고객 분석</h1>
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <KpiCard
-                    title="전체 고객"
-                    value={getKpiValue(data?.totalCustomers, "명")}
-                />
-                <KpiCard
-                    title="신규 고객"
-                    value={getKpiValue(data?.newCustomers, "명")}
-                />
-                <KpiCard
-                    title="재구매 고객"
-                    value={getKpiValue(data?.repeatCustomers, "명")}
-                />
-                <KpiCard
-                    title="재구매율"
-                    value={getKpiValue(data?.repeatPurchaseRate, "%")}
-                />
+                {isPending ? (
+                    Array.from({ length: 4 }, (_, index) => (
+                        <KpiCardSkeleton key={index} />
+                    ))
+                ) : (
+                    <>
+                        <KpiCard
+                            title="전체 고객"
+                            value={getKpiValue(data?.totalCustomers, "명")}
+                            icon={<Users size={20} />}
+                            color="blue"
+                        />
+                        <KpiCard
+                            title="신규 고객"
+                            value={getKpiValue(data?.newCustomers, "명")}
+                            icon={<UserPlus size={20} />}
+                            color="green"
+                        />
+                        <KpiCard
+                            title="재구매 고객"
+                            value={getKpiValue(data?.repeatCustomers, "명")}
+                            icon={<UserCheck size={20} />}
+                            color="orange"
+                        />
+                        <KpiCard
+                            title="재구매율"
+                            value={getKpiValue(data?.repeatPurchaseRate, "%")}
+                            icon={<TrendingUp size={20} />}
+                            color="red"
+                        />
+                    </>
+                )}
             </div>
 
             {data && (
@@ -52,10 +88,22 @@ export default function CustomersPage() {
                         전체 고객 중 신규 고객과 기존 고객의 비율
                     </p>
 
-                    <CustomerDistributionChart
-                        totalCustomers={data.totalCustomers}
-                        newCustomers={data.newCustomers}
-                    />
+                    {isPending ? (
+                        <div className="h-72 animate-pulse rounded-xl bg-slate-200" />
+                    ) : isError ? (
+                        <div className="flex h-72 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500">
+                            고객 구성 데이터를 불러오지 못했습니다.
+                        </div>
+                    ) : data ? (
+                        <CustomerDistributionChart
+                            totalCustomers={data.totalCustomers}
+                            newCustomers={data.newCustomers}
+                        />
+                    ) : (
+                        <p className="py-8 text-center text-slate-500">
+                            고객 구성 데이터가 없습니다.
+                        </p>
+                    )}
                 </section>
             )}
 
@@ -70,7 +118,7 @@ export default function CustomersPage() {
                             placeholder="고객 이름 검색"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            className="mon-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-2 sm:w-64"
+                            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-2 sm:w-64"
                         />
                         <button
                             type="button"
@@ -85,15 +133,11 @@ export default function CustomersPage() {
                     </div>
                 </div>
                 {isPending ? (
-                    <p>고객 목록을 불러오는 중...</p>
+                    <TableSkeleton rows={5} columns={4} />
                 ) : isError ? (
                     <p>고객 목록을 불러오지 못했습니다.</p>
                 ) : filteredCustomers.length === 0 ? (
-                    <p className="py-8 text-center text-slate-500">
-                        {search.trim()
-                            ? "검색 결과가 없습니다."
-                            : "등록된 고객이 없습니다."}
-                    </p>
+                    <p>검색 결과가 없습니다.</p>
                 ) : (
                     <CustomerTable customers={filteredCustomers} />
                 )}

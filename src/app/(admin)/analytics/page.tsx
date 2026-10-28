@@ -1,12 +1,15 @@
 "use client"
 
+import ErrorState from "@/src/components/ErrorState";
 import GrowthRateCard from "@/src/components/GrowthRateCard";
 import KpiCard from "@/src/components/KpiCard";
+import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
 import SalesComparisonChart from "@/src/components/SalesComparisonChart";
 import { useAnalytics } from "@/src/hooks/useAnalytics";
 import { useAnalyticsMetrics } from "@/src/hooks/useAnalyticsMetrics";
 import { useSalesComparison } from "@/src/hooks/useSalesComparison";
 import type { Period } from "@/src/types/analytics";
+import { ChartNoAxesCombined, TrendingUp, Wallet } from "lucide-react";
 import { useState } from "react";
 
 
@@ -21,7 +24,7 @@ function formatCurrency(value: number) {
 export default function AnalyticsPage() {
     const [period, setPeriod] = useState<Period>("7d");
 
-    const { data, isPending, isError, isFetching } =
+    const { data, isPending, isError, isFetching, refetch } =
         useAnalytics(period);
     const sales = data?.sales;
     const previousTotalRevenue = data?.previousTotalRevenue;
@@ -50,6 +53,23 @@ export default function AnalyticsPage() {
 
         return formatCurrency(value);
     }
+
+    if (isError) {
+        return (
+            <div className="p-8">
+                <h1 className="text-3xl font-bold">매출 분석</h1>
+
+                <div className="mt-6">
+                    <ErrorState
+                        message="매출 분석 데이터를 불러오지 못했습니다."
+                        onRetry={() => refetch()}
+                        isRetrying={isFetching}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-8">
             <h1 className="text-3xl font-bold">매출 분석</h1>
@@ -58,18 +78,32 @@ export default function AnalyticsPage() {
             </p>
 
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <KpiCard
-                    title="총매출"
-                    value={getKpiValue(totalRevenue)}
-                />
-                <KpiCard
-                    title="평균 매출"
-                    value={getKpiValue(averageRevenue)}
-                />
-                <KpiCard
-                    title="최고 매출"
-                    value={getKpiValue(maxRevenue)}
-                />
+                {isPending ? (
+                    Array.from({ length: 3 }, (_, index) => (
+                        <KpiCardSkeleton key={index} />
+                    ))
+                ) : (
+                    <>
+                        <KpiCard
+                            title="총매출"
+                            value={getKpiValue(totalRevenue)}
+                            icon={<Wallet size={20} />}
+                            color="blue"
+                        />
+                        <KpiCard
+                            title="평균 매출"
+                            value={getKpiValue(averageRevenue)}
+                            icon={<ChartNoAxesCombined size={20} />}
+                            color="green"
+                        />
+                        <KpiCard
+                            title="최고 매출"
+                            value={getKpiValue(maxRevenue)}
+                            icon={<TrendingUp size={20} />}
+                            color="orange"
+                        />
+                    </>
+                )}
             </div>
 
             <div className="mt-4">
@@ -110,9 +144,7 @@ export default function AnalyticsPage() {
                     </p>
                 </div>
                 {isPending ? (
-                    <div className="flex h-80 items-center justify-center text-slate-500">
-                        매출 데이터를 불러오는 중...
-                    </div>
+                    <div className="h-80 animate-pulse rounded-lg bg-slate-200" />
                 ) : isError ? (
                     <div className="flex h-80 items-center justify-center text-red-500">
                         매출 데이터를 불러오지 못했습니다.

@@ -13,6 +13,15 @@ export default function GrowthRateCard({
     isPending,
     isError,
 }: GrowthRateCardProps) {
+    if (isPending) {
+        return (
+            <div className="animate-pulse rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="h-4 w-40 rounded bg-slate-200" />
+                <div className="mt-3 h-8 w-28 rounded bg-slate-200" />
+            </div>
+        );
+    }
+
     const colorClass =
         growthRate === null
             ? "text-slate-500"
@@ -21,7 +30,7 @@ export default function GrowthRateCard({
                 : growthRate < 0
                     ? "text-red-600"
                     : "text-slate-600";
-    const showIcon = !isPending && !isError && growthRate !== null;
+    const showIcon = !isError && growthRate !== null;
 
     return (
         <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -39,13 +48,11 @@ export default function GrowthRateCard({
                 )}
 
                 <p className={`text-2xl font-bold ${colorClass}`}>
-                    {isPending
-                        ? "불러오는 중..."
-                        : isError
-                            ? "조회 실패"
-                            : growthRate === null
-                                ? "비교 데이터 없음"
-                                : `${growthRate > 0 ? "+" : ""}${growthRate.toFixed(1)}%`}
+                    {isError
+                        ? "조회 실패"
+                        : growthRate === null
+                            ? "비교 데이터 없음"
+                            : `${growthRate > 0 ? "+" : ""}${growthRate.toFixed(1)}%`}
                 </p>
             </div>
         </div>

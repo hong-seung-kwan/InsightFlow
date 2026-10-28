@@ -1,9 +1,13 @@
 "use client";
 
+import ErrorState from "@/src/components/ErrorState";
 import KpiCard from "@/src/components/KpiCard";
+import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
 import OrderTable from "@/src/components/OrderTable";
+import TableSkeleton from "@/src/components/TableSkeleton";
 import { useOrders } from "@/src/hooks/useOrders";
 import type { OrderStatus } from "@/src/types/orders";
+import { CheckCircle2, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 
 type SortOption = "latest" | "priceHigh" | "priceLow";
@@ -24,7 +28,7 @@ export default function OrdersPage() {
     const [sortOption, setSortOption] = useState<SortOption>("latest");
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5;
-    const { data, isPending, isError } = useOrders();
+    const { data, isPending, isError, isFetching, refetch } = useOrders();
     const keyword = search.trim().toLowerCase();
     const filteredOrders = (data?.orders ?? []).filter((order) => {
         const matchesSearch = order.customerName.toLowerCase().includes(keyword) || order.id.toLowerCase().includes(keyword);
@@ -55,10 +59,25 @@ export default function OrdersPage() {
 
 
     function getKpiValue(value: number | undefined, suffix: string) {
-        if (isPending) return "불러오는 중...";
-        if (isError) return "조회 실패";
-
         return `${value?.toLocaleString("ko-KR") ?? "0"}${suffix}`;
+    }
+
+    if (isError) {
+        return (
+            <div className="p-8">
+                <h1 className="text-3xl font-bold">
+                    주문 관리
+                </h1>
+
+                <div className="mt-6">
+                    <ErrorState
+                        message="주문 데이터를 불러오지 못했습니다."
+                        onRetry={() => refetch()}
+                        isRetrying={isFetching}
+                    />
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -66,22 +85,38 @@ export default function OrdersPage() {
             <h1 className="text-3xl font-bold">주문 관리</h1>
 
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <KpiCard
-                    title="전체 주문"
-                    value={getKpiValue(data?.totalOrders, "건")}
-                />
-                <KpiCard
-                    title="결제 완료"
-                    value={getKpiValue(data?.paidOrders, "건")}
-                />
-                <KpiCard
-                    title="배송 중"
-                    value={getKpiValue(data?.shippingOrders, "건")}
-                />
-                <KpiCard
-                    title="취소 주문"
-                    value={getKpiValue(data?.cancelledOrders, "건")}
-                />
+                {isPending ? (
+                    Array.from({ length: 4 }, (_, index) => (
+                        <KpiCardSkeleton key={index} />
+                    ))
+                ) : (
+                    <>
+                        <KpiCard
+                            title="전체 주문"
+                            value={getKpiValue(data?.totalOrders, "건")}
+                            icon={<ShoppingBag size={20} />}
+                            color="blue"
+                        />
+                        <KpiCard
+                            title="결제 완료"
+                            value={getKpiValue(data?.paidOrders, "건")}
+                            icon={<CheckCircle2 size={20} />}
+                            color="green"
+                        />
+                        <KpiCard
+                            title="배송 중"
+                            value={getKpiValue(data?.shippingOrders, "건")}
+                            icon={<Truck size={20} />}
+                            color="orange"
+                        />
+                        <KpiCard
+                            title="취소 주문"
+                            value={getKpiValue(data?.cancelledOrders, "건")}
+                            icon={<XCircle size={20} />}
+                            color="red"
+                        />
+                    </>
+                )}
             </div>
 
             <div className="mt-8">
@@ -93,13 +128,13 @@ export default function OrdersPage() {
                         type="text"
                         placeholder="주문번호 또는 고객명 검색"
                         value={search}
-                        onChange={(event) => {setSearch(event.target.value); setCurrentPage(1)}}
+                        onChange={(event) => { setSearch(event.target.value); setCurrentPage(1) }}
                         className="rounded-lg border border-slate-300 px-4 py-2 sm:flex-1"
                     />
 
                     <button
                         type="button"
-                        onClick={() => {setSearch(""); setCurrentPage(1)}}
+                        onClick={() => { setSearch(""); setCurrentPage(1) }}
                         disabled={!search}
                         className="rounded-lg bg-slate-800 px-4 py-2 text-white disabled:opacity-50"
                     >
@@ -122,7 +157,7 @@ export default function OrdersPage() {
                     {statusOptions.map((option) => (
                         <button
                             key={option.value}
-                            onClick={() => {setStatusFilter(option.value); setCurrentPage(1)}}
+                            onClick={() => { setStatusFilter(option.value); setCurrentPage(1) }}
                             className={`rounded-lg px-4 py-2 ${statusFilter === option.value
                                 ? "bg-slate-900 text-white"
                                 : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -134,9 +169,7 @@ export default function OrdersPage() {
 
                 </div>
                 {isPending ? (
-                    <p>주문 목록을 불러오는 중...</p>
-                ) : isError ? (
-                    <p>주문 목록을 불러오지 못했습니다.</p>
+                    <TableSkeleton rows={5} columns={5} />
                 ) : sortedOrders.length === 0 ? (
                     <p className="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500">
                         {search.trim() || statusFilter !== "ALL"
@@ -147,7 +180,7 @@ export default function OrdersPage() {
                     <OrderTable orders={paginatedOrders} />
                 )}
 
-                {!isPending && !isError && totalPages > 1 && (
+                {!isPending && totalPages > 1 && (
                     <div className="mt-4 flex items-center justify-center gap-2">
                         <button
                             type="button"
@@ -164,8 +197,8 @@ export default function OrdersPage() {
                                 key={index}
                                 onClick={() => setCurrentPage(index + 1)}
                                 className={`rounded-lg px-3 py-2 ${currentPage === index + 1
-                                        ? "bg-slate-900 text-white"
-                                        : "border border-slate-200 bg-white"
+                                    ? "bg-slate-900 text-white"
+                                    : "border border-slate-200 bg-white"
                                     }`}
                             >
                                 {index + 1}
