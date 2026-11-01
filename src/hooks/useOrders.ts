@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { OrdersResponse } from "../types/orders";
 
-export function useOrders() {
+export type OrdersMode = "shopify" | "demo";
+
+export function useOrders(mode: OrdersMode = "shopify") {
     return useQuery<OrdersResponse>({
-        queryKey:["orders"],
+        queryKey:["orders", mode],
         queryFn: async() => {
-            const response = await fetch("/api/orders");
+            const response = await fetch(`/api/orders?mode=${mode}`);
 
             if(!response.ok){
                 throw new Error("주문 데이터 요청 실패");

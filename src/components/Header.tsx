@@ -1,35 +1,47 @@
+import { useDataMode } from "../contexts/DataModeContext";
+
 interface HeaderProps {
     onMenuClick: () => void;
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
+    const { mode, setMode } = useDataMode();
     return (
         <header className="h-16 border-b px-6 flex items-center justify-between">
 
             <div className="flex items-center gap-3">
-                <button
-                    type="button"
-                    onClick={onMenuClick}
-                    aria-label="메뉴 열기"
-                    className="md:hidden"
-                >
-                    ☰
-                </button>
+                <div className="flex rounded-lg bg-slate-100 p-1">
+                    <button
+                        type="button"
+                        onClick={() => setMode("demo")}
+                        aria-pressed={mode === "demo"}
+                        className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "demo"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600"
+                            }`}
+                    >
+                        데모
+                    </button>
 
-                <h2 className="text-lg font-semibold">
-                    InsightFlow Admin
-                </h2>
-            </div>
+                    <button
+                        type="button"
+                        onClick={() => setMode("shopify")}
+                        aria-pressed={mode === "shopify"}
+                        className={`rounded-md px-3 py-1.5 text-sm font-medium ${mode === "shopify"
+                                ? "bg-blue-600 text-white shadow-sm"
+                                : "text-slate-600"
+                            }`}
+                    >
+                        Shopify
+                    </button>
+                </div>
 
-            <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-500">
+                <span className="hidden text-sm text-gray-500 sm:inline">
                     관리자
                 </span>
 
-                <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-blue-700 font-bold">
-                        A
-                    </span>
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
+                    <span className="font-bold text-blue-700">A</span>
                 </div>
             </div>
         </header>

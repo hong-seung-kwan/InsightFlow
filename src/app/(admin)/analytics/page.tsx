@@ -11,21 +11,17 @@ import { useSalesComparison } from "@/src/hooks/useSalesComparison";
 import type { Period } from "@/src/types/analytics";
 import { ChartNoAxesCombined, TrendingUp, Wallet } from "lucide-react";
 import { useState } from "react";
+import { formatCurrency } from "@/src/utils/formatCurrency";
+import { useDataMode } from "@/src/contexts/DataModeContext";
 
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat("ko-KR", {
-        style: "currency",
-        currency: "KRW",
-        maximumFractionDigits: 0,
-    }).format(value);
-}
 
 export default function AnalyticsPage() {
     const [period, setPeriod] = useState<Period>("7d");
+    const { mode } = useDataMode();
 
     const { data, isPending, isError, isFetching, refetch } =
-        useAnalytics(period);
+        useAnalytics(period, mode);
     const sales = data?.sales;
     const previousTotalRevenue = data?.previousTotalRevenue;
 
@@ -51,7 +47,7 @@ export default function AnalyticsPage() {
         if (isPending) return "불러오는 중...";
         if (isError) return "조회 실패";
 
-        return formatCurrency(value);
+        return formatCurrency(value, data?.currencyCode ?? "USD");
     }
 
     if (isError) {
@@ -76,7 +72,12 @@ export default function AnalyticsPage() {
             <p className="mt-2 text-slate-500">
                 기간별 매출 추이를 확인할 수 있습니다.
             </p>
-
+            {mode === "demo" && (
+                <p className="mt-3 text-sm text-amber-700">
+                    현재 가상 매출 데이터를 표시하고 있습니다.
+                    실제 Shopify 주문 데이터와는 무관합니다.
+                </p>
+            )}
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 {isPending ? (
                     Array.from({ length: 3 }, (_, index) => (
@@ -91,13 +92,13 @@ export default function AnalyticsPage() {
                             color="blue"
                         />
                         <KpiCard
-                            title="평균 매출"
+                            title="일평균 매출"
                             value={getKpiValue(averageRevenue)}
                             icon={<ChartNoAxesCombined size={20} />}
                             color="green"
                         />
                         <KpiCard
-                            title="최고 매출"
+                            title="최고 일매출"
                             value={getKpiValue(maxRevenue)}
                             icon={<TrendingUp size={20} />}
                             color="orange"
@@ -145,12 +146,11 @@ export default function AnalyticsPage() {
                 </div>
                 {isPending ? (
                     <div className="h-80 animate-pulse rounded-lg bg-slate-200" />
-                ) : isError ? (
-                    <div className="flex h-80 items-center justify-center text-red-500">
-                        매출 데이터를 불러오지 못했습니다.
-                    </div>
                 ) : (
-                    <SalesComparisonChart data={comparisonData} />
+                    <SalesComparisonChart
+                        data={comparisonData}
+                        currencyCode={data?.currencyCode ?? "USD"}
+                    />
                 )}
 
             </div>

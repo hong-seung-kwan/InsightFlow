@@ -1,55 +1,42 @@
-const salesData = {
-    "7d": [
-        { date: "10/16", revenue: 1200000 },
-        { date: "10/17", revenue: 1800000 },
-        { date: "10/18", revenue: 1500000 },
-        { date: "10/19", revenue: 2200000 },
-        { date: "10/20", revenue: 1900000 },
-        { date: "10/21", revenue: 2500000 },
-        { date: "10/22", revenue: 2100000 },
-    ],
-    "30d": [
-        { date: "1주차", revenue: 8500000 },
-        { date: "2주차", revenue: 11200000 },
-        { date: "3주차", revenue: 9800000 },
-        { date: "4주차", revenue: 13500000 },
-    ],
-    "90d": [
-        { date: "8월", revenue: 32000000 },
-        { date: "9월", revenue: 38500000 },
-        { date: "10월", revenue: 42000000 },
-    ],
-};
-
-const previousSalesData = {
-    "7d": [
-        { date: "1일차", revenue: 1000000 },
-        { date: "2일차", revenue: 1400000 },
-        { date: "3일차", revenue: 1300000 },
-        { date: "4일차", revenue: 1600000 },
-        { date: "5일차", revenue: 1400000 },
-        { date: "6일차", revenue: 1700000 },
-        { date: "7일차", revenue: 1600000 },
-    ],
-    "30d": [
-        { date: "1주차", revenue: 8000000 },
-        { date: "2주차", revenue: 9500000 },
-        { date: "3주차", revenue: 10000000 },
-        { date: "4주차", revenue: 10500000 },
-    ],
-    "90d": [
-        { date: "1개월차", revenue: 28000000 },
-        { date: "2개월차", revenue: 32000000 },
-        { date: "3개월차", revenue: 35000000 },
-    ],
-};
+import { generateDemoAnalytics } from "@/src/lib/demoAnalytics";
+import { shopifyGraphQL } from "@/src/lib/shopify";
 
 type Period = "7d" | "30d" | "90d";
 
-const previousRevenueData: Record<Period, number> = {
-    "7d": 10000000,
-    "30d": 38000000,
-    "90d": 95000000,
+interface ShopifyOrder {
+    id: string;
+    createdAt: string;
+    cancelledAt: string | null;
+    displayFinancialStatus: string;
+    totalPriceSet: {
+        shopMoney: {
+            amount: string;
+            currencyCode: string;
+        };
+    };
+}
+
+interface ShopifyOrdersResponse {
+    orders: {
+        nodes: ShopifyOrder[];
+        pageInfo: {
+            hasNextPage: boolean;
+            endCursor: string | null;
+        };
+    };
+}
+
+function formatDate(date: Date) {
+    return date.toISOString().slice(0, 10);
+}
+
+function getStartDate(daysAgo: number) {
+    const date = new Date();
+
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - daysAgo);
+
+    return date;
 }
 
 export async function GET(request: Request) {
@@ -61,15 +48,140 @@ export async function GET(request: Request) {
         return Response.json(
             { message: "지원하지 않는 기간입니다." },
             { status: 400 }
-        )
+        );
     }
 
-    const selectedPeriod: Period = period;
+    const mode = searchParams.get("mode") ?? "shopify";
 
-    return Response.json({
-        period: period,
-        sales: salesData[selectedPeriod],
-        previousSales: previousSalesData[selectedPeriod],
-        previousTotalRevenue:previousRevenueData[selectedPeriod]
-    });
+    if (mode !== "shopify" && mode !== "demo") {
+        return Response.json(
+            {message : "지원하지 않는 데이터 모드입니다."},
+            {status: 400}
+        );
+    }
+
+    if (mode === "demo") {
+        return Response.json(generateDemoAnalytics(period));
+    }
+
+    try {
+        const days = Number(period.replace("d", ""));
+
+        // 현재 기간과 이전 기간을 모두 포함하는 시작일
+        const startDate = getStartDate(days * 2 - 1);
+
+        const orders: ShopifyOrder[] = [];
+        let cursor: string | null = null;
+
+        // Shopify GraphQL 커서 기반 페이지네이션
+        do {
+            const after: string = cursor
+                ? `, after: ${JSON.stringify(cursor)}`
+                : "";
+
+            const query: string = `
+        query {
+            orders(
+                first: 100
+                sortKey: CREATED_AT
+                reverse: false
+                query: "created_at:>=${formatDate(startDate)}"
+                ${after}
+            ) {
+                nodes {
+                    id
+                    createdAt
+                    cancelledAt
+                    displayFinancialStatus
+                    totalPriceSet {
+                        shopMoney {
+                            amount
+                            currencyCode
+                        }
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                    endCursor
+                }
+            }
+        }
+    `;
+
+            const data: ShopifyOrdersResponse =
+                await shopifyGraphQL<ShopifyOrdersResponse>(query);
+
+            orders.push(...data.orders.nodes);
+
+            cursor = data.orders.pageInfo.hasNextPage
+                ? data.orders.pageInfo.endCursor
+                : null;
+
+        } while (cursor);
+
+        // 결제 완료 및 취소되지 않은 주문
+        const paidOrders = orders.filter(
+            (order) =>
+                !order.cancelledAt &&
+                order.displayFinancialStatus === "PAID"
+        );
+
+        // 날짜별 매출 집계
+        const revenueByDate = new Map<string, number>();
+
+        for (const order of paidOrders) {
+            const date = order.createdAt.slice(0, 10);
+            const revenue = Number(
+                order.totalPriceSet.shopMoney.amount
+            );
+
+            revenueByDate.set(
+                date,
+                (revenueByDate.get(date) ?? 0) + revenue
+            );
+        }
+
+        // 현재 기간과 이전 기간의 일별 데이터 생성
+        const sales = [];
+        const previousSales = [];
+
+        for (let i = 0; i < days; i++) {
+            const currentDate = getStartDate(days - 1 - i);
+            const previousDate = getStartDate(days * 2 - 1 - i);
+
+            const currentKey = formatDate(currentDate);
+            const previousKey = formatDate(previousDate);
+
+            sales.push({
+                date: currentKey,
+                revenue: revenueByDate.get(currentKey) ?? 0,
+            });
+
+            previousSales.push({
+                date: previousKey,
+                revenue: revenueByDate.get(previousKey) ?? 0,
+            });
+        }
+
+        const previousTotalRevenue = previousSales.reduce(
+            (sum, item) => sum + item.revenue,
+            0
+        );
+
+        return Response.json({
+            period,
+            sales,
+            previousSales,
+            previousTotalRevenue,
+            currencyCode:
+                paidOrders[0]?.totalPriceSet.shopMoney.currencyCode ?? "USD",
+        });
+    } catch (error) {
+        console.error("Shopify 매출 분석 오류:", error);
+
+        return Response.json(
+            { message: "매출 분석 데이터를 불러오지 못했습니다." },
+            { status: 500 }
+        );
+    }
 }

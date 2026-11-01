@@ -4,12 +4,17 @@ import type {
     Period,
 } from "@/src/types/analytics";
 
-export function useAnalytics(period: Period) {
+export type AnalyticsMode = "shopify" | "demo";
+
+export function useAnalytics(
+    period: Period,
+    mode: AnalyticsMode = "shopify"
+) {
     return useQuery<AnalyticsResponse>({
-        queryKey: ["analytics", period],
+        queryKey: ["analytics", period, mode],
         queryFn: async () => {
             const response = await fetch(
-                `/api/analytics?period=${period}`
+                `/api/analytics?period=${period}&mode=${mode}`
             );
 
             if (!response.ok) {

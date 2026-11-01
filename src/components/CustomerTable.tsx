@@ -1,4 +1,5 @@
-import { Customer } from "../types/customers";
+import type { Customer } from "../types/customers";
+import { formatCurrency } from "../utils/formatCurrency";
 
 interface CustomerTableProps {
     customers: Customer[];
@@ -27,7 +28,7 @@ export default function CustomerTable({
                         >
                             <td className="p-4">{customer.name}</td>
                             <td className="p-4">{customer.orderCount}건</td>
-                            <td className="p-4">{customer.totalSpent.toLocaleString("ko-KR")}원</td>
+                            <td className="p-4">{formatCurrency(customer.totalSpent, customer.currencyCode)}</td>
                             <td className="p-4">{customer.joinedAt}</td>
                         </tr>
                     ))}

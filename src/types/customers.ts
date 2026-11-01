@@ -1,8 +1,9 @@
 export interface Customer {
-    id: number;
+    id: string;
     name: string;
     orderCount: number;
     totalSpent: number;
+    currencyCode:string;
     joinedAt: string;
 }
 

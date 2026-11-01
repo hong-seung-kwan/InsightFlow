@@ -7,7 +7,14 @@ export interface SalesData {
 
 export interface AnalyticsResponse {
     period: Period;
-    sales: SalesData[];
-    previousSales: SalesData[];
+    sales: {
+        date: string;
+        revenue: number;
+    }[];
+    previousSales: {
+        date: string;
+        revenue: number;
+    }[];
     previousTotalRevenue: number;
+    currencyCode: string;
 }

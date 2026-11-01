@@ -10,33 +10,44 @@ type KpiId = "revenue" | "orders" | "visits" | "conversion";
 interface KpiData {
     id: KpiId;
     title: string,
-    value: number;
+    value: number | null;
+    currencyCode?: string;
 }
+
+import { formatCurrency } from "@/src/utils/formatCurrency";
+import { useDataMode } from "@/src/contexts/DataModeContext";
 
 function formatKpiValue(
     id: KpiId,
-    value: number
+    value: number | null,
+    currencyCode?: string
 ): string {
-    if (id === "revenue") {
-        return new Intl.NumberFormat("ko-KR", {
-            style: "currency",
-            currency: "KRW",
-        }).format(value)
+    if (value === null) {
+        return "-";
     }
+
+    if (id === "revenue") {
+        return formatCurrency(value, currencyCode ?? "USD");
+    }
+
     if (id === "orders") {
         return `${new Intl.NumberFormat("ko-KR").format(value)}건`;
     }
+
     if (id === "visits") {
         return new Intl.NumberFormat("ko-KR").format(value);
     }
+
     if (id === "conversion") {
         return `${new Intl.NumberFormat("ko-KR", {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
         }).format(value)}%`;
     }
+
     return String(value);
 }
+
 const kpiConfig = {
     revenue: {
         icon: <Wallet size={20} />,
@@ -57,11 +68,13 @@ const kpiConfig = {
 } as const;
 
 export default function DashboardPage() {
+    const { mode } = useDataMode();
     const { data, isPending, isError, isFetching, refetch } = useQuery<KpiData[]>({
-        queryKey: ["dashboard"],
+        queryKey: ["dashboard", mode],
+
         queryFn: async () => {
 
-            const response = await fetch("/api/dashboard");
+            const response = await fetch(`/api/dashboard?mode=${mode}`);
 
             if (!response.ok) {
                 throw new Error("대시보드 데이터 요청 실패");
@@ -112,6 +125,12 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold">InsightFlow Dashboard</h1>
             <p className="mt-2 text-gray-500">쇼핑몰 매출 및 고객 분석 대시보드</p>
 
+            {mode === "demo" && (
+                <p className="mt-3 text-sm text-amber-700">
+                    현재 가상 쇼핑몰 데이터를 표시하고 있습니다.
+                    실제 Shopify 데이터와는 무관합니다.
+                </p>
+            )}
             {isFetching && (
                 <p className="mt-2 text-sm text-blue-600">
                     최신 데이터를 업데이트하는 중...
@@ -122,7 +141,7 @@ export default function DashboardPage() {
                     <KpiCard
                         key={item.id}
                         title={item.title}
-                        value={formatKpiValue(item.id, item.value)}
+                        value={formatKpiValue(item.id, item.value, item.currencyCode)}
                         icon={kpiConfig[item.id].icon}
                         color={kpiConfig[item.id].color}
                     />

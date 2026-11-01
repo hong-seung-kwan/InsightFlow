@@ -1,3 +1,4 @@
+import { formatCurrency } from "../utils/formatCurrency";
 import type { Order, OrderStatus } from "../types/orders";
 
 interface OrderTableProps {
@@ -5,13 +6,17 @@ interface OrderTableProps {
 }
 
 const statusLabels: Record<OrderStatus, string> = {
+    PENDING: "결제 대기",
     PAID: "결제 완료",
-    SHIPPING: "배송 중",
+    PARTIALLY_FULFILLED: "일부 배송 처리",
+    FULFILLED: "배송 처리 완료",
     CANCELLED: "취소",
 }
 const statusStyles: Record<OrderStatus, string> = {
+    PENDING: "bg-yellow-100 text-yellow-700",
     PAID: "bg-green-100 text-green-700",
-    SHIPPING: "bg-blue-100 text-blue-700",
+    PARTIALLY_FULFILLED:"bg-orange-100 text-orange-700",
+    FULFILLED:"bg-blue-100 text-blue-700",
     CANCELLED: "bg-red-100 text-red-700",
 };
 
@@ -37,7 +42,7 @@ export default function OrderTable({ orders }: OrderTableProps) {
                         >
                             <td className="p-4 font-medium text-slate-900">{order.id}</td>
                             <td className="p-4">{order.customerName}</td>
-                            <td className="p-4">{order.amount.toLocaleString("ko-KR")}원</td>
+                            <td className="p-4">{formatCurrency(order.amount, order.currencyCode)}</td>
                             <td className="p-4">
                                 <span
                                     className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[order.status]}`}

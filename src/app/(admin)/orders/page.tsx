@@ -5,6 +5,7 @@ import KpiCard from "@/src/components/KpiCard";
 import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
 import OrderTable from "@/src/components/OrderTable";
 import TableSkeleton from "@/src/components/TableSkeleton";
+import { useDataMode, type DataMode } from "@/src/contexts/DataModeContext";
 import { useOrders } from "@/src/hooks/useOrders";
 import type { OrderStatus } from "@/src/types/orders";
 import { CheckCircle2, ShoppingBag, Truck, XCircle } from "lucide-react";
@@ -17,18 +18,32 @@ const statusOptions: {
     value: OrderStatus | "ALL";
 }[] = [
         { label: "전체", value: "ALL" },
+        { label: "결제 대기", value: "PENDING" },
         { label: "결제 완료", value: "PAID" },
-        { label: "배송 중", value: "SHIPPING" },
-        { label: "취소", value: "CANCELLED" }
+        { label: "일부 배송 처리", value: "PARTIALLY_FULFILLED" },
+        { label: "배송 완료", value: "FULFILLED" },
+        { label: "취소", value: "CANCELLED" },
     ]
 
 export default function OrdersPage() {
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
+    const { mode } = useDataMode();
+
+    return <OrdersContent key={mode} mode={mode} />;
+}
+
+function OrdersContent({ mode }: { mode: DataMode }) {
+    const [statusFilter, setStatusFilter] =
+        useState<OrderStatus | "ALL">("ALL");
+
     const [search, setSearch] = useState("");
-    const [sortOption, setSortOption] = useState<SortOption>("latest");
+    const [sortOption, setSortOption] =
+        useState<SortOption>("latest");
+
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5;
-    const { data, isPending, isError, isFetching, refetch } = useOrders();
+
+    const { data, isPending, isError, isFetching, refetch } =
+        useOrders(mode);
     const keyword = search.trim().toLowerCase();
     const filteredOrders = (data?.orders ?? []).filter((order) => {
         const matchesSearch = order.customerName.toLowerCase().includes(keyword) || order.id.toLowerCase().includes(keyword);
@@ -49,14 +64,30 @@ export default function OrdersPage() {
         return b.orderedAt.localeCompare(a.orderedAt);
     })
     const totalPages = Math.ceil(sortedOrders.length / pageSize);
+    const visiblePageCount = 5;
+    const startPage = Math.max(
+        1,
+        Math.min(
+            currentPage - Math.floor(visiblePageCount / 2),
+            totalPages - visiblePageCount + 1
+        )
+    );
 
+    const endPage = Math.min(
+        totalPages,
+        startPage + visiblePageCount - 1
+    );
+
+    const visiblePages = Array.from(
+        { length: Math.max(0, endPage - startPage + 1) },
+        (_, index) => startPage + index
+    );
     const startIndex = (currentPage - 1) * pageSize;
 
     const paginatedOrders = sortedOrders.slice(
         startIndex,
         startIndex + pageSize
     )
-
 
     function getKpiValue(value: number | undefined, suffix: string) {
         return `${value?.toLocaleString("ko-KR") ?? "0"}${suffix}`;
@@ -84,6 +115,13 @@ export default function OrdersPage() {
         <div className="p-8">
             <h1 className="text-3xl font-bold">주문 관리</h1>
 
+            {mode === "demo" && (
+                <p className="mt-3 text-sm text-amber-700">
+                    현재 가상 주문 데이터를 표시하고 있습니다.
+                    실제 Shopify 주문 데이터와는 무관합니다.
+                </p>
+            )}
+
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {isPending ? (
                     Array.from({ length: 4 }, (_, index) => (
@@ -104,7 +142,7 @@ export default function OrdersPage() {
                             color="green"
                         />
                         <KpiCard
-                            title="배송 중"
+                            title="배송 처리"
                             value={getKpiValue(data?.shippingOrders, "건")}
                             icon={<Truck size={20} />}
                             color="orange"
@@ -191,19 +229,22 @@ export default function OrdersPage() {
                             이전
                         </button>
 
-                        {Array.from({ length: totalPages }, (_, index) => (
+
+                        {visiblePages.map((page) => (
                             <button
                                 type="button"
-                                key={index}
-                                onClick={() => setCurrentPage(index + 1)}
-                                className={`rounded-lg px-3 py-2 ${currentPage === index + 1
-                                    ? "bg-slate-900 text-white"
-                                    : "border border-slate-200 bg-white"
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                aria-current={currentPage === page ? "page" : undefined}
+                                className={`rounded-lg px-3 py-2 ${currentPage === page
+                                        ? "bg-slate-900 text-white"
+                                        : "border border-slate-200 bg-white hover:bg-slate-100"
                                     }`}
                             >
-                                {index + 1}
+                                {page}
                             </button>
                         ))}
+
 
                         <button
                             type="button"

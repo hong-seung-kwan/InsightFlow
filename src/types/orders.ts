@@ -1,9 +1,15 @@
-export type OrderStatus= "PAID" | "SHIPPING" | "CANCELLED";
+export type OrderStatus =
+    | "PENDING"
+    | "PAID"
+    | "FULFILLED"
+    | "PARTIALLY_FULFILLED"
+    | "CANCELLED";
 
 export interface Order {
-    id:string;
+    id: string;
     customerName: string;
     amount: number;
+    currencyCode: string;
     status: OrderStatus;
     orderedAt: string;
 }
@@ -13,5 +19,5 @@ export interface OrdersResponse {
     totalOrders: number;
     paidOrders: number;
     shippingOrders: number;
-    cancelledOrders:number;
+    cancelledOrders: number;
 }

@@ -6,16 +6,25 @@ import ErrorState from "@/src/components/ErrorState";
 import KpiCard from "@/src/components/KpiCard";
 import KpiCardSkeleton from "@/src/components/KpiCardSkeleton";
 import TableSkeleton from "@/src/components/TableSkeleton";
+import { DataMode, useDataMode } from "@/src/contexts/DataModeContext";
 import { useCustomers } from "@/src/hooks/useCustomers";
 import { TrendingUp, UserCheck, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 
 export default function CustomersPage() {
-    const [search, setSearch] = useState("");
-    const { data, isPending, isError, isFetching, refetch } = useCustomers();
+    const { mode } = useDataMode();
 
+    return <CustomersContent key={mode} mode={mode} />;
+}
+
+function CustomersContent({ mode }: { mode: DataMode }) {
+    const [search, setSearch] = useState("");
+
+    const { data, isPending, isError, isFetching, refetch } =
+        useCustomers(mode);
+    const keyword = search.trim().toLowerCase();
     const filteredCustomers = (data?.customers ?? []).filter((customer) => {
-        return customer.name.includes(search.trim());
+        return customer.name.toLowerCase().includes(keyword);
     })
 
     function getKpiValue(value: number | undefined, suffix: string) {
@@ -44,6 +53,12 @@ export default function CustomersPage() {
     return (
         <div className="p-8">
             <h1 className="text-3xl font-bold">고객 분석</h1>
+            {mode === "demo" && (
+                <p className="mt-3 text-sm text-amber-700">
+                    현재 가상 고객 데이터를 표시하고 있습니다.
+                    실제 Shopify 고객 데이터와는 무관합니다.
+                </p>
+            )}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {isPending ? (
                     Array.from({ length: 4 }, (_, index) => (
@@ -84,30 +99,17 @@ export default function CustomersPage() {
                     <h2 className="mb-1 text-xl font-semibold">
                         고객 구성 비율
                     </h2>
+
                     <p className="mb-4 text-sm text-slate-500">
                         전체 고객 중 신규 고객과 기존 고객의 비율
                     </p>
 
-                    {isPending ? (
-                        <div className="h-72 animate-pulse rounded-xl bg-slate-200" />
-                    ) : isError ? (
-                        <div className="flex h-72 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500">
-                            고객 구성 데이터를 불러오지 못했습니다.
-                        </div>
-                    ) : data ? (
-                        <CustomerDistributionChart
-                            totalCustomers={data.totalCustomers}
-                            newCustomers={data.newCustomers}
-                        />
-                    ) : (
-                        <p className="py-8 text-center text-slate-500">
-                            고객 구성 데이터가 없습니다.
-                        </p>
-                    )}
+                    <CustomerDistributionChart
+                        totalCustomers={data.totalCustomers}
+                        newCustomers={data.newCustomers}
+                    />
                 </section>
             )}
-
-
 
             <div className="mt-8">
                 <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
