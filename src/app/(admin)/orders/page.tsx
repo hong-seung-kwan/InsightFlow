@@ -9,7 +9,8 @@ import { useDataMode, type DataMode } from "@/src/contexts/DataModeContext";
 import { useOrders } from "@/src/hooks/useOrders";
 import type { OrderStatus } from "@/src/types/orders";
 import { CheckCircle2, ShoppingBag, Truck, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 type SortOption = "latest" | "priceHigh" | "priceLow";
 
@@ -25,15 +26,54 @@ const statusOptions: {
         { label: "취소", value: "CANCELLED" },
     ]
 
-export default function OrdersPage() {
-    const { mode } = useDataMode();
 
-    return <OrdersContent key={mode} mode={mode} />;
+export default function OrdersPage() {
+    return (
+        <Suspense fallback={<div className="p-8">주문 페이지 불러오는 중...</div>}>
+            <OrdersPageContent />
+        </Suspense>
+    );
 }
 
-function OrdersContent({ mode }: { mode: DataMode }) {
+function OrdersPageContent() {
+    const { mode } = useDataMode();
+    const searchParams = useSearchParams();
+    const status = searchParams.get("status") ?? "ALL";
+
+    return (
+        <OrdersContent
+            key={`${mode}-${status}`}
+            mode={mode}
+            statusParam={status}
+        />
+    );
+}
+
+
+
+function OrdersContent({
+    mode,
+    statusParam,
+}: {
+    mode: DataMode;
+    statusParam: string;
+}) {
+    const validStatuses: OrderStatus[] = [
+        "PAID",
+        "FULFILLED",
+        "PARTIALLY_FULFILLED",
+        "PENDING",
+        "CANCELLED",
+    ];
+
+
+    const initialStatus: OrderStatus | "ALL" =
+        validStatuses.includes(statusParam as OrderStatus)
+            ? (statusParam as OrderStatus)
+            : "ALL";
+
     const [statusFilter, setStatusFilter] =
-        useState<OrderStatus | "ALL">("ALL");
+        useState<OrderStatus | "ALL">(initialStatus);
 
     const [search, setSearch] = useState("");
     const [sortOption, setSortOption] =
@@ -237,8 +277,8 @@ function OrdersContent({ mode }: { mode: DataMode }) {
                                 onClick={() => setCurrentPage(page)}
                                 aria-current={currentPage === page ? "page" : undefined}
                                 className={`rounded-lg px-3 py-2 ${currentPage === page
-                                        ? "bg-slate-900 text-white"
-                                        : "border border-slate-200 bg-white hover:bg-slate-100"
+                                    ? "bg-slate-900 text-white"
+                                    : "border border-slate-200 bg-white hover:bg-slate-100"
                                     }`}
                             >
                                 {page}

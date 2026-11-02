@@ -16,6 +16,10 @@ interface KpiData {
 
 import { formatCurrency } from "@/src/utils/formatCurrency";
 import { useDataMode } from "@/src/contexts/DataModeContext";
+import { useAnalytics } from "@/src/hooks/useAnalytics";
+import DashboardSalesChart from "@/src/components/DashboardSalesChart";
+import DashboardRecentOrders from "@/src/components/DashboardRecentOrders";
+import DashboardOrderStatus from "@/src/components/DashboardOrderStatus";
 
 function formatKpiValue(
     id: KpiId,
@@ -69,6 +73,13 @@ const kpiConfig = {
 
 export default function DashboardPage() {
     const { mode } = useDataMode();
+    const {
+        data: salesData,
+        isPending: isSalesPending,
+        isError: isSalesError,
+        refetch: refetchSales,
+    } = useAnalytics("7d", mode);
+
     const { data, isPending, isError, isFetching, refetch } = useQuery<KpiData[]>({
         queryKey: ["dashboard", mode],
 
@@ -147,6 +158,47 @@ export default function DashboardPage() {
                     />
                 ))}
             </div>
+            <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-6">
+                    <h2 className="text-xl font-semibold">
+                        최근 7일 매출 추이
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        최근 7일 동안 발생한 매출을 확인할 수 있습니다.
+                    </p>
+                </div>
+
+                {isSalesPending ? (
+                    <div className="h-72 animate-pulse rounded-lg bg-slate-100" />
+                ) : isSalesError ? (
+                    <div className="flex h-72 flex-col items-center justify-center gap-3">
+                        <p className="text-sm text-red-500">
+                            매출 데이터를 불러오지 못했습니다.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => refetchSales()}
+                            className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white"
+                        >
+                            다시 시도
+                        </button>
+                    </div>
+                ) : (
+                    <DashboardSalesChart
+                        data={salesData?.sales ?? []}
+                        currencyCode={salesData?.currencyCode ?? "USD"}
+                    />
+                )
+                }
+            </section>
+
+            <DashboardOrderStatus />
+
+            <DashboardRecentOrders />
+
+
         </main>
     )
 }

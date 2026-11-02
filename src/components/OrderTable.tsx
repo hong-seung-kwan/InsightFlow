@@ -1,33 +1,19 @@
 import { formatCurrency } from "../utils/formatCurrency";
-import type { Order, OrderStatus } from "../types/orders";
+import type { Order } from "../types/orders";
+import OrderStatusBadge from "./OrderStatusBadge";
 
 interface OrderTableProps {
     orders: Order[]
 }
 
-const statusLabels: Record<OrderStatus, string> = {
-    PENDING: "결제 대기",
-    PAID: "결제 완료",
-    PARTIALLY_FULFILLED: "일부 배송 처리",
-    FULFILLED: "배송 처리 완료",
-    CANCELLED: "취소",
-}
-const statusStyles: Record<OrderStatus, string> = {
-    PENDING: "bg-yellow-100 text-yellow-700",
-    PAID: "bg-green-100 text-green-700",
-    PARTIALLY_FULFILLED:"bg-orange-100 text-orange-700",
-    FULFILLED:"bg-blue-100 text-blue-700",
-    CANCELLED: "bg-red-100 text-red-700",
-};
-
 export default function OrderTable({ orders }: OrderTableProps) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full text-left">
+        <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[700px] whitespace-nowrap text-left text-sm">
                 <thead className="bg-slate-50">
                     <tr>
                         <th className="p-4">주문번호</th>
-                        <th className="p-4">고객명</th>
+                        <th className="whitespace-nowrap px-4 py-3">고객명</th>
                         <th className="p-4">주문 금액</th>
                         <th className="p-4">상태</th>
                         <th className="p-4">주문일</th>
@@ -41,14 +27,10 @@ export default function OrderTable({ orders }: OrderTableProps) {
                             className="border-t border-slate-200 transition-colors hover:bg-slate-50"
                         >
                             <td className="p-4 font-medium text-slate-900">{order.id}</td>
-                            <td className="p-4">{order.customerName}</td>
+                            <td className="whitespace-nowrap px-4 py-4">{order.customerName}</td>
                             <td className="p-4">{formatCurrency(order.amount, order.currencyCode)}</td>
                             <td className="p-4">
-                                <span
-                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusStyles[order.status]}`}
-                                >
-                                    {statusLabels[order.status]}
-                                </span>
+                                <OrderStatusBadge status={order.status} />
                             </td>
                             <td className="p-4">{order.orderedAt}</td>
                         </tr>
