@@ -30,7 +30,7 @@ export default function DashboardRecentOrders() {
 
                 <Link
                     href="/orders"
-                    className="text-sm font-medium text-blue-600 hover:underling"
+                    className="shrink-0 whitespace-nowrap text-sm font-medium text-blue-600 hover:underline"
                 >
                     전체 주문 보기
                 </Link>
@@ -64,8 +64,8 @@ export default function DashboardRecentOrders() {
                     등록된 주문이 없습니다.
                 </p>
             ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                <div className="w-full min-w-0 overflow-x-auto">
+                    <table className="w-full min-w-[650px] whitespace-nowrap text-left text-sm">
                         <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
                             <tr>
                                 <th className="px-4 py-3 font-medium">주문번호</th>

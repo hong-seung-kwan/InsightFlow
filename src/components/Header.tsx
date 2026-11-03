@@ -44,14 +44,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
                         Shopify
                     </button>
                 </div>
-
-                <span className="hidden text-sm text-gray-500 sm:inline">
-                    관리자
-                </span>
-
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
-                    <span className="font-bold text-blue-700">A</span>
-                </div>
             </div>
         </header>
     );

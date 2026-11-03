@@ -9,8 +9,8 @@ export default function CustomerTable({
     customers,
 }: CustomerTableProps) {
     return (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-            <table className="w-full text-left">
+        <div className="w-full min-w-0 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full min-w-[600px] whitespace-nowrap text-left text-sm">
                 <thead className="bg-slate-50">
                     <tr>
                         <th className="p-4">고객명</th>

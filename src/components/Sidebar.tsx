@@ -30,9 +30,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             `}
         >
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">
+                <Link
+                    href="/dashboard"
+                    onClick={onClose}
+                    className="inline-block text-xl font-bold text-slate-900 transition-colors hover:text-blue-600">
                     InsightFlow
-                </h2>
+                </Link>
 
                 <button
                     type="button"
@@ -52,8 +55,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             key={menu.href}
                             href={menu.href}
                             onClick={onClose}
-                            className={`block rounded-lg px-4 py-3 ${
-                                isActive
+                            className={`block rounded-lg px-4 py-3 ${isActive
                                     ? "bg-blue-100 text-blue-700 font-semibold"
                                     : "hover:bg-gray-500"
                                 }`}
